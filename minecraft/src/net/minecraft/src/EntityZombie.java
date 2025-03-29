@@ -32,6 +32,6 @@ public class EntityZombie extends EntityMob {
 	}
 
 	protected int getDropItemId() {
-		return Item.feather.shiftedIndex;
+		return mod_Goulish.flesh.shiftedIndex;
 	}
 }

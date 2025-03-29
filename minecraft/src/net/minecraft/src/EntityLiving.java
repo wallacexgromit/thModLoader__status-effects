@@ -138,7 +138,14 @@ public abstract class EntityLiving extends Entity {
 		}
 
 		int var1;
-		if(this.isEntityAlive() && this.isInsideOfMaterial(Material.water) && !this.canBreatheUnderwater()) {
+		boolean waterBreath = false;
+		for(StatusEffect e : this.statusEffects.values()) {
+			if(e.waterBreath) {
+				waterBreath = true;
+				break;
+			}
+		}
+		if(!waterBreath && this.isEntityAlive() && this.isInsideOfMaterial(Material.water) && !this.canBreatheUnderwater()) {
 			--this.air;
 			if(this.air == -20) {
 				this.air = 0;
@@ -544,8 +551,8 @@ public abstract class EntityLiving extends Entity {
 			var3 = this.posY;
 			float fly = .02F;
 			for(StatusEffect se : this.statusEffects.values()) {
-				if(se.moveInWater) {
-					fly = .05F;
+				if(se.waterSpeed != 0) {
+					fly = se.waterSpeed;
 					break;
 				}
 			}
@@ -699,6 +706,7 @@ public abstract class EntityLiving extends Entity {
 	
 	public void handleStatusEffectTick() {
 		// activate effects
+		ArrayList<StatusEffect> effectsToRemove = new ArrayList<StatusEffect>();
 		for(Map.Entry<String, StatusEffect> se : this.statusEffects.entrySet()) {
 			StatusEffect e = se.getValue();
 			int ticks = this.statusEffectTicks.get(e.name);
@@ -715,15 +723,16 @@ public abstract class EntityLiving extends Entity {
 			
 			// decrement ticker
 			if(ticks == 0) {
-				if(this instanceof EntityPlayer) {
-					((EntityPlayer)this).removeStatusEffect(e);
-				}
-				this.removeStatusEffect(e.name);
+				effectsToRemove.add(e);
 			}
 			else {
 				ticks -= 1;
 				this.statusEffectTicks.put(e.name, ticks);
 			}
+		}
+		
+		for(StatusEffect e : effectsToRemove) {
+			this.removeStatusEffect(e);
 		}
 	}
 
