@@ -1,5 +1,6 @@
 package net.minecraft.src;
 
+import java.util.ArrayList;
 import java.util.Random;
 
 public abstract class BlockFluid extends Block {
@@ -69,6 +70,18 @@ public abstract class BlockFluid extends Block {
 
 	public AxisAlignedBB getCollisionBoundingBoxFromPool(World var1, int var2, int var3, int var4) {
 		return null;
+	}
+	
+	public void getCollidingBoundingBoxes(EntityLiving e, World var1, int var2, int var3, int var4, AxisAlignedBB var5, ArrayList var6) {
+		for(StatusEffect se : e.statusEffects.values()) {
+			if(se.waterWalking) {
+				AxisAlignedBB var7 = super.getCollisionBoundingBoxFromPool(var1, var2, var3, var4);
+				if(var7 != null && var5.intersectsWith(var7)) {
+					var6.add(var7);
+				}
+				break;
+			}
+		}
 	}
 
 	public int getRenderType() {

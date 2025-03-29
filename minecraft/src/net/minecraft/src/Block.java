@@ -314,8 +314,38 @@ public class Block {
 		return this.blockHardness < 0.0F ? 0.0F : (!var1.canHarvestBlock(this) ? 1.0F / this.blockHardness / 100.0F : var1.getCurrentPlayerStrVsBlock(this) / this.blockHardness / 30.0F);
 	}
 
-	public final void dropBlockAsItem(World var1, int var2, int var3, int var4, int var5) {
+	public void dropBlockAsItem(World var1, int var2, int var3, int var4, int var5) {
 		this.dropBlockAsItemWithChance(var1, var2, var3, var4, var5, 1.0F);
+	}
+	
+	public void dropBlockAsItem(World var1, EntityPlayer p, int var2, int var3, int var4, int var5) {
+		this.dropBlockAsItemWithChance(var1, p, var2, var3, var4, var5, 1.0F);
+	}
+	
+	public void dropBlockAsItemWithChance(World var1, EntityPlayer p, int var2, int var3, int var4, int var5, float var6) {
+		if(!var1.multiplayerWorld) {
+			int var7 = this.quantityDropped(var1.rand);
+			
+			for(StatusEffect se : p.statusEffects.values()) {
+				if(se.fortuneBlocks.size() > 0) {
+					for(StatusEffectBlock b : se.fortuneBlocks) {
+						if(this.blockID == b.block) {
+							var7 += var1.rand.nextInt(b.chance);
+						}
+					}
+				}
+			}
+
+			for(int var8 = 0; var8 < var7; ++var8) {
+				if(var1.rand.nextFloat() <= var6) {
+					int var9 = this.idDropped(var5, var1.rand);
+					if(var9 > 0) {
+						this.dropBlockAsItem_do(var1, var2, var3, var4, new ItemStack(var9, 1, this.damageDropped(var5)));
+					}
+				}
+			}
+
+		}
 	}
 
 	public void dropBlockAsItemWithChance(World var1, int var2, int var3, int var4, int var5, float var6) {
@@ -520,7 +550,20 @@ public class Block {
 
 	public void harvestBlock(World var1, EntityPlayer var2, int var3, int var4, int var5, int var6) {
 		var2.addStat(StatList.mineBlockStatArray[this.blockID], 1);
-		this.dropBlockAsItem(var1, var3, var4, var5, var6);
+		boolean hasFortune = false;
+		for(StatusEffect se : var2.statusEffects.values()) {
+			if(se.fortuneBlocks.size() > 0) {
+				hasFortune = true;
+				break;
+			}
+		}
+		
+		if(hasFortune) {
+			this.dropBlockAsItem(var1, var2, var3, var4, var5, var6);
+		}
+		else {
+			this.dropBlockAsItem(var1, var3, var4, var5, var6);
+		}
 	}
 
 	public boolean canBlockStay(World var1, int var2, int var3, int var4) {

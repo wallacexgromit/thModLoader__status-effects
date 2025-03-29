@@ -8,12 +8,13 @@ public class thModLoader {
 
 		for(int var3 = 0; var3 < var2; ++var3) {
 			Item var4 = var1[var3];
-			if(var4 != null && var4.shiftedIndex > var0) {
-				var0 = var4.shiftedIndex;
+			if(var4 != null && var3 > var0) {
+				var0 = var3;
 			}
 		}
-
-		return var0++;
+		
+		// var0 - 256 + 1
+		return var0 - 255;
 	}
 
 	public static Item AddItem(String var0, String var1, Item var2, Boolean var3) {
@@ -36,5 +37,20 @@ public class thModLoader {
 
 		ModLoader.AddName(var5, var2);
 		return var5;
+	}
+	
+	public static int GetNewBlockIndex() {
+		int var0 = 0;
+		Block[] var1 = Block.blocksList;
+		int var2 = var1.length;
+
+		for(int var3 = 0; var3 < var2; ++var3) {
+			Block var4 = var1[var3];
+			if(var4 != null) {
+				var0 = var3;
+			}
+		}
+
+		return var0 + 1;
 	}
 }

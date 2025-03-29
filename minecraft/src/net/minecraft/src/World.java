@@ -963,7 +963,13 @@ public class World implements IBlockAccess {
 					for(int var11 = var5 - 1; var11 < var6; ++var11) {
 						Block var12 = Block.blocksList[this.getBlockId(var9, var11, var10)];
 						if(var12 != null) {
-							var12.getCollidingBoundingBoxes(this, var9, var11, var10, var2, this.collidingBoundingBoxes);
+							// special handling for liquids to allow for status effects
+							if(var12 instanceof BlockFluid && var1 instanceof EntityLiving) {
+								((BlockFluid)var12).getCollidingBoundingBoxes((EntityLiving)var1, this, var9, var11, var10, var2, this.collidingBoundingBoxes);
+							}
+							else {
+								var12.getCollidingBoundingBoxes(this, var9, var11, var10, var2, this.collidingBoundingBoxes);
+							}
 						}
 					}
 				}

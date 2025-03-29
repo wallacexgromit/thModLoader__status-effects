@@ -2,6 +2,7 @@ package net.minecraft.src;
 
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public abstract class EntityPlayer extends EntityLiving {
 	public InventoryPlayer inventory = new InventoryPlayer(this);
@@ -49,6 +50,16 @@ public abstract class EntityPlayer extends EntityLiving {
 		this.field_9353_B = 180.0F;
 		this.fireResistance = 20;
 		this.texture = "/mob/char.png";
+	}
+	
+	public void addStatusEffect(StatusEffect eff) {
+		super.addStatusEffect(eff);
+		this.addChatMessage(eff.startMessage);
+	}
+	
+	public void removeStatusEffect(StatusEffect eff) {
+		super.removeStatusEffect(eff.name);
+		this.addChatMessage(eff.endMessage);
 	}
 
 	protected void entityInit() {
@@ -297,7 +308,19 @@ public abstract class EntityPlayer extends EntityLiving {
 		if(!this.onGround) {
 			var2 /= 5.0F;
 		}
-
+		
+		for(Map.Entry<String, StatusEffect> se : this.statusEffects.entrySet()) {
+			StatusEffect e = se.getValue();
+			if(e.miningSpeed != 0) {
+				var2 *= e.miningSpeed;
+			}
+			if(this.isInsideOfMaterial(Material.water)) {
+				if(e.mineInWater) {
+					var2 *= 5.0f;
+				}
+			}
+		}
+		
 		return var2;
 	}
 
@@ -491,7 +514,11 @@ public abstract class EntityPlayer extends EntityLiving {
 			if(this.motionY < 0.0D) {
 				++var2;
 			}
-
+			for(StatusEffect se : this.statusEffects.values()) {
+				if(se.dmg != 0) {
+					var2 *= se.dmg;
+				}
+			}
 			var1.attackEntityFrom(this, var2);
 			ItemStack var3 = this.getCurrentEquippedItem();
 			if(var3 != null && var1 instanceof EntityLiving) {
@@ -508,6 +535,21 @@ public abstract class EntityPlayer extends EntityLiving {
 				}
 
 				this.addStat(StatList.damageDealtStat, var2);
+				
+				// drop blood
+				// any hit can make blood drop, but the knife has a higher chance
+				double chance = .1;
+				if(var3 != null) {
+					if(var3.getItemName().contains("knife")) {
+						chance = .5;
+					}
+					else {
+						chance = .20;
+					}
+				}
+				if(Math.random() < chance) {
+					var1.dropItem(mod_Goulish.blood.shiftedIndex, 1);
+				}
 			}
 		}
 

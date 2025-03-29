@@ -1,6 +1,9 @@
 package net.minecraft.src;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public abstract class EntityLiving extends Entity {
 	public int heartsHalvesLife = 20;
@@ -56,6 +59,8 @@ public abstract class EntityLiving extends Entity {
 	protected float moveSpeed = 0.7F;
 	private Entity currentTarget;
 	protected int numTicksToChaseTarget = 0;
+	public Map<String, StatusEffect> statusEffects = new HashMap<String, StatusEffect>();
+	public Map<String, Integer> statusEffectTicks = new HashMap<String, Integer>();
 
 	public EntityLiving(World var1) {
 		super(var1);
@@ -65,6 +70,20 @@ public abstract class EntityLiving extends Entity {
 		this.field_9365_p = (float)Math.random() * 12398.0F;
 		this.rotationYaw = (float)(Math.random() * (double)((float)Math.PI) * 2.0D);
 		this.stepHeight = 0.5F;
+	}
+	
+	public void addStatusEffect(StatusEffect eff) {
+		this.statusEffects.put(eff.name, eff);
+		this.statusEffectTicks.put(eff.name, eff.duration);
+	}
+	
+	public void removeStatusEffect(StatusEffect eff) {
+		removeStatusEffect(eff.name);
+	}
+	
+	public void removeStatusEffect(String name) {
+		this.statusEffects.remove(name);
+		this.statusEffectTicks.remove(name);
 	}
 
 	protected void entityInit() {
@@ -303,6 +322,66 @@ public abstract class EntityLiving extends Entity {
 			this.heartsLife = this.heartsHalvesLife / 2;
 		}
 	}
+	
+	public boolean attackEntityFrom(Entity var1, int var2, boolean knockback) {
+		if(this.worldObj.multiplayerWorld) {
+			return false;
+		} else {
+			this.entityAge = 0;
+			if(this.health <= 0) {
+				return false;
+			} else {
+				this.field_704_R = 1.5F;
+				boolean var3 = true;
+				if((float)this.heartsLife > (float)this.heartsHalvesLife / 2.0F) {
+					if(var2 <= this.field_9346_af) {
+						return false;
+					}
+
+					this.damageEntity(var2 - this.field_9346_af);
+					this.field_9346_af = var2;
+					var3 = false;
+				} else {
+					this.field_9346_af = var2;
+					this.prevHealth = this.health;
+					this.heartsLife = this.heartsHalvesLife;
+					this.damageEntity(var2);
+					this.hurtTime = this.maxHurtTime = 10;
+				}
+
+				this.attackedAtYaw = 0.0F;
+				if(var3 && knockback) {
+					this.worldObj.func_9425_a(this, (byte)2);
+					this.setBeenAttacked();
+					if(var1 != null) {
+						double var4 = var1.posX - this.posX;
+
+						double var6;
+						for(var6 = var1.posZ - this.posZ; var4 * var4 + var6 * var6 < 1.0E-4D; var6 = (Math.random() - Math.random()) * 0.01D) {
+							var4 = (Math.random() - Math.random()) * 0.01D;
+						}
+
+						this.attackedAtYaw = (float)(Math.atan2(var6, var4) * 180.0D / (double)((float)Math.PI)) - this.rotationYaw;
+						this.knockBack(var1, var2, var4, var6);
+					} else {
+						this.attackedAtYaw = (float)((int)(Math.random() * 2.0D) * 180);
+					}
+				}
+
+				if(this.health <= 0) {
+					if(var3) {
+						this.worldObj.playSoundAtEntity(this, this.getDeathSound(), this.getSoundVolume(), (this.rand.nextFloat() - this.rand.nextFloat()) * 0.2F + 1.0F);
+					}
+
+					this.onDeath(var1);
+				} else if(var3) {
+					this.worldObj.playSoundAtEntity(this, this.getHurtSound(), this.getSoundVolume(), (this.rand.nextFloat() - this.rand.nextFloat()) * 0.2F + 1.0F);
+				}
+
+				return true;
+			}
+		}
+	}
 
 	public boolean attackEntityFrom(Entity var1, int var2) {
 		if(this.worldObj.multiplayerWorld) {
@@ -439,23 +518,38 @@ public abstract class EntityLiving extends Entity {
 
 	protected void fall(float var1) {
 		super.fall(var1);
-		int var2 = (int)Math.ceil((double)(var1 - 3.0F));
-		if(var2 > 0) {
-			this.attackEntityFrom((Entity)null, var2);
-			int var3 = this.worldObj.getBlockId(MathHelper.floor_double(this.posX), MathHelper.floor_double(this.posY - (double)0.2F - (double)this.yOffset), MathHelper.floor_double(this.posZ));
-			if(var3 > 0) {
-				StepSound var4 = Block.blocksList[var3].stepSound;
-				this.worldObj.playSoundAtEntity(this, var4.func_1145_d(), var4.getVolume() * 0.5F, var4.getPitch() * (12.0F / 16.0F));
+		boolean featherFall = false;
+		for(StatusEffect se : this.statusEffects.values()) {
+			if(se.featherFall) {
+				featherFall = true;
+				break;
 			}
 		}
-
+		if(!featherFall) {
+			int var2 = (int)Math.ceil((double)(var1 - 3.0F));
+			if(var2 > 0) {
+				this.attackEntityFrom((Entity)null, var2);
+				int var3 = this.worldObj.getBlockId(MathHelper.floor_double(this.posX), MathHelper.floor_double(this.posY - (double)0.2F - (double)this.yOffset), MathHelper.floor_double(this.posZ));
+				if(var3 > 0) {
+					StepSound var4 = Block.blocksList[var3].stepSound;
+					this.worldObj.playSoundAtEntity(this, var4.func_1145_d(), var4.getVolume() * 0.5F, var4.getPitch() * (12.0F / 16.0F));
+				}
+			}
+		}
 	}
 
 	public void moveEntityWithHeading(float var1, float var2) {
 		double var3;
 		if(this.isInWater()) {
 			var3 = this.posY;
-			this.moveFlying(var1, var2, 0.02F);
+			float fly = .02F;
+			for(StatusEffect se : this.statusEffects.values()) {
+				if(se.moveInWater) {
+					fly = .05F;
+					break;
+				}
+			}
+			this.moveFlying(var1, var2, fly);
 			this.moveEntity(this.motionX, this.motionY, this.motionZ);
 			this.motionX *= (double)0.8F;
 			this.motionY *= (double)0.8F;
@@ -523,8 +617,23 @@ public abstract class EntityLiving extends Entity {
 					this.motionY = 0.0D;
 				}
 			}
-
-			this.moveEntity(this.motionX, this.motionY, this.motionZ);
+			
+			double x = this.motionX;
+			double y = this.motionY;
+			double z = this.motionZ;
+			for(Map.Entry<String, StatusEffect> s : this.statusEffects.entrySet()) {
+				if(s.getValue().x != 0) {
+					x *= s.getValue().x;
+				}
+				if(s.getValue().y != 0) {
+					y *= s.getValue().y;
+				}
+				if(s.getValue().z != 0) {
+					z *= s.getValue().z;
+				}
+			}
+			
+			this.moveEntity(x, y, z);			
 			if(this.isCollidedHorizontally && this.isOnLadder()) {
 				this.motionY = 0.2D;
 			}
@@ -579,8 +688,47 @@ public abstract class EntityLiving extends Entity {
 	public boolean canBreatheUnderwater() {
 		return false;
 	}
+	
+	public void runStatusEffect(StatusEffect e) {
+		if(e.dps > 0) {
+			if(this.health > 1) {
+				this.attackEntityFrom(this, e.dps, false);
+			}
+		}
+	}
+	
+	public void handleStatusEffectTick() {
+		// activate effects
+		for(Map.Entry<String, StatusEffect> se : this.statusEffects.entrySet()) {
+			StatusEffect e = se.getValue();
+			int ticks = this.statusEffectTicks.get(e.name);
+			
+			// check if tick matches mod
+			if(e.mod != 0) {
+				if(ticks % e.mod == 0) {
+					runStatusEffect(e);
+				}
+			}
+			else {
+				runStatusEffect(e);
+			}
+			
+			// decrement ticker
+			if(ticks == 0) {
+				if(this instanceof EntityPlayer) {
+					((EntityPlayer)this).removeStatusEffect(e);
+				}
+				this.removeStatusEffect(e.name);
+			}
+			else {
+				ticks -= 1;
+				this.statusEffectTicks.put(e.name, ticks);
+			}
+		}
+	}
 
 	public void onLivingUpdate() {
+		this.handleStatusEffectTick();
 		if(this.newPosRotationIncrements > 0) {
 			double var1 = this.posX + (this.newPosX - this.posX) / (double)this.newPosRotationIncrements;
 			double var3 = this.posY + (this.newPosY - this.posY) / (double)this.newPosRotationIncrements;
