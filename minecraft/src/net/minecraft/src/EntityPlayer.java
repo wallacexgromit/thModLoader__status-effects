@@ -548,7 +548,7 @@ public abstract class EntityPlayer extends EntityLiving {
 					}
 				}
 				if(Math.random() < chance) {
-					var1.dropItem(mod_Goulish.blood.shiftedIndex, 1);
+					var1.dropItem(mod_Elixirs.blood.shiftedIndex, 1);
 				}
 			}
 		}

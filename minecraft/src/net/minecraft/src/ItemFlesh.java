@@ -11,7 +11,7 @@ public class ItemFlesh extends ItemFood {
 		--var1.stackSize;
 		var3.heal(this.healAmount);
 		
-		var3.addStatusEffect(mod_Goulish.poison);
+		var3.addStatusEffect(mod_Elixirs.poison);
 		
 		return var1;
 	}
